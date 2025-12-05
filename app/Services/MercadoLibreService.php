@@ -26,4 +26,17 @@ class MercadoLibreService
 
         return $response->json();
     }
+
+    public function predictCategory(string $title)
+    {
+        $response = Http::get("{$this->baseUrl}/sites/MLA/category_predictor/predict", [
+            'title' => $title,
+        ]);
+
+        if ($response->successful() && isset($response[0]['id'])) {
+            return $response[0]['id'];
+        }
+
+        return null;
+    }
 }

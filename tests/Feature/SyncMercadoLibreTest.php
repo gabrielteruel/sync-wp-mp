@@ -25,10 +25,16 @@ class SyncMercadoLibreTest extends TestCase
 
         // Mock Service
         $this->mock(MercadoLibreService::class, function ($mock) {
+            $mock->shouldReceive('predictCategory')
+                ->once()
+                ->with('Test Product')
+                ->andReturn('MLA1234');
+
             $mock->shouldReceive('createItem')
                 ->once()
                 ->withArgs(function ($data) {
                     return $data['title'] === 'Test Product'
+                        && $data['category_id'] === 'MLA1234'
                         && $data['price'] === 100.00
                         && $data['pictures'][0]['source'] === 'https://example.com/image.jpg';
                 })

@@ -34,9 +34,16 @@ class SyncMercadoLibre extends Command
         foreach ($products as $product) {
             $this->info("Syncing product: {$product->name}");
 
+            // Predict Category
+            $categoryId = $service->predictCategory($product->name);
+            if (! $categoryId) {
+                $this->warn("Could not predict category for '{$product->name}'. Using default MLA3530.");
+                $categoryId = 'MLA3530';
+            }
+
             $data = [
                 'title' => $product->name,
-                'category_id' => 'MLA3530', // Placeholder: Other > Other
+                'category_id' => $categoryId,
                 'price' => (float) $product->price,
                 'currency_id' => 'ARS',
                 'available_quantity' => 1,
