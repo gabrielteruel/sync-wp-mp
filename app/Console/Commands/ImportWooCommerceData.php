@@ -49,22 +49,29 @@ class ImportWooCommerceData extends Command
 
             // Import Products
             $this->info('Importing Products...');
+            // Fetch specific product for testing
+            //$products = $woocommerceService->getProducts(['include' => [11508]]);
             $products = $woocommerceService->getProducts(['per_page' => 100]);
 
             foreach ($products as $wcProduct) {
                 // Collect category IDs
                 $categoryIds = [];
-                if (! empty($wcProduct->categories)) {
+                if (!empty($wcProduct->categories)) {
                     foreach ($wcProduct->categories as $catData) {
-                        $localCat = Category::where('woocommerce_id', $catData->id)->first();
-                        if ($localCat) {
-                            $categoryIds[] = $localCat->id;
-                        }
+                        // Ensure category exists locally
+                        $localCat = Category::updateOrCreate(
+                            ['woocommerce_id' => $catData->id],
+                            [
+                                'name' => $catData->name,
+                                'slug' => $catData->slug,
+                            ]
+                        );
+                        $categoryIds[] = $localCat->id;
                     }
                 }
 
                 $imageUrl = null;
-                if (! empty($wcProduct->images) && isset($wcProduct->images[0]->src)) {
+                if (!empty($wcProduct->images) && isset($wcProduct->images[0]->src)) {
                     $imageUrl = $wcProduct->images[0]->src;
                 }
 
@@ -76,17 +83,34 @@ class ImportWooCommerceData extends Command
                         'price' => $wcProduct->price,
                         'description' => $wcProduct->short_description ?: $wcProduct->description,
                         'image_url' => $imageUrl,
+                        // 'mercadolibre_id' => ... remove this line, let it persist
                     ]
                 );
 
+                // Fix: updateOrCreate returns the model. We don't need to manually preserve ML ID if we are finding by WC ID.
+
                 // Sync categories
                 $product->categories()->sync($categoryIds);
+
+                // Sync Images
+                if (!empty($wcProduct->images)) {
+                    // Decide strategy: Delete all and re-create? Or updateOrCreate?
+                    // Safe approach for sync: Delete all and re-insert to reflect deletions in WC.
+                    $product->images()->delete();
+
+                    foreach ($wcProduct->images as $index => $imgData) {
+                        $product->images()->create([
+                            'url' => $imgData->src,
+                            'is_featured' => $index === 0,
+                        ]);
+                    }
+                }
             }
             $this->info('Products imported.');
 
             $this->info('Import completed successfully.');
         } catch (\Exception $e) {
-            $this->error('Error importing data: '.$e->getMessage());
+            $this->error('Error importing data: ' . $e->getMessage());
         }
     }
 }

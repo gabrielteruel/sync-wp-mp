@@ -16,6 +16,7 @@ class WooCommerceService
             env('WOOCOMMERCE_CONSUMER_SECRET'),
             [
                 'version' => 'wc/v3',
+                'timeout' => env('WOOCOMMERCE_WP_TIMEOUT'),
             ]
         );
     }
